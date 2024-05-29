@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<!-- ROS libraries -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/eventemitter2@6.4.9/lib/eventemitter2.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+<script src="../js/bot_controller.js"></script>
+
+<link rel="stylesheet" href="../styles/style.css">
+
+<script type="text/javascript">
+     var ros = new ROSLIB.Ros({
+     url : 'ws://localhost:9090'
+     });
+
+     ros.on('connection', function() {
+     console.log('Connected to websocket server.');
+     });
+
+     ros.on('error', function(error) {
+     console.log('Error connecting to websocket server: ', error);
+     });
+
+     ros.on('close', function() {
+     console.log('Connection to websocket server closed.');
+     });
+
+
+     var turtleBot3MoveVel = {
+          linear : {
+               x : 0,
+               y : 0,
+               z : 0
+          },
+          angular : {
+               x : 0,
+               y : 0,
+               z : 0
+          }
+     };
+     // Topic to receive video frames
+     const videoTopic = new ROSLIB.Topic({
+          ros         : ros,
+          name        : '/video_frames',
+          messageType : 'sensor_msgs/CompressedImage'
+     });
+     
+     const moveTopic = new ROSLIB.Topic({
+          ros         : ros,
+          name        : "/cmd_vel",
+          messageType : "geometry_msg/Twist"
+     })
+
+     const killTopic = new ROSLIB.Topic({
+          ros         : ros,
+          name        : "/shut_down_process",
+          messageType : ""
+     })
+     
+     // Function to handle incoming video frames
+     videoTopic.subscribe(function(message) {
+          var img = document.getElementById('videoStream');
+          img.src = 'data:image/jpeg;base64,' + message.data;
+     });
+
+     
+     function killOverService(){
+          killTopic.publish("KILL THE PROCESS")
+     }
+
+
+     function handleMove(button){
+          buttonValue = button.id
+
+          switch (buttonValue) {
+               case "foward":
+                    turtleBot3MoveVel.linear.x = 1;
+                    turtleBot3MoveVel.angular.z = 0;
+                    break;
+               
+               case "back":
+                    turtleBot3MoveVel.linear.x = -1;
+                    turtleBot3MoveVel.angular.z = 0;
+                    break
+
+               case "left":
+                    turtleBot3MoveVel.linear.x = 0;
+                    turtleBot3MoveVel.angular.z = -1;
+                    break
+
+               case "right":
+                    turtleBot3MoveVel.linear.x = 0;
+                    turtleBot3MoveVel.angular.z = 1;
+                    break
+
+               case "stop":
+                    turtleBot3MoveVel.linear.x = 0;
+                    turtleBot3MoveVel.angular.z = 0
+               
+               case "kill":
+                    killOverService()
+
+               default:
+                    turtleBot3MoveVel.linear.x = 0;
+                    turtleBot3MoveVel.angular.z = 0;
+                    break
+          }
+
+          moveTopic.publish(turtleBot3MoveVel)
+
+     };
+     
+     window.onload = function() {
+     // Subscribe to video frames once
+     videoTopic.subscribe();
+     };
+</script>
+</head>
+<body>
+     <main>
+          <img id="videoStream" alt="Video Stream"/>
+          <div class="buttons-sections">
+               <div class="control-row">
+                    <button id="foward" class="control" onfocus="handleMove(this)">↑</button>
+               </div>
+               <div class="control-row">
+                    <button id="left" class="control"   onfocus="handleMove(this)">←</button>
+                    <button id="back" class="control"   onfocus="handleMove(this)">↓</button>
+                    <button id="right" class="control"  onfocus="handleMove(this)">→</button>
+               </div>
+               <div class="control-row">
+                    <button id="stop" class="control" onclick="handleMove(this)">Stop</button>
+                    <button id=kill class="control" onclick="handleMove(this)"> Kill</button>
+               </div>
+          </div>
+     </main>
+</body>
+</html>
